@@ -1,0 +1,637 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>قهرمان سلامت</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn-font@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            scroll-behavior: smooth;
+            color: #334155; /* text-slate-700 */
+            background-color: #f0f9ff; /* bg-sky-50, very light blue */
+            overflow: hidden; /* Prevent body scroll on desktop */
+        }
+        .app-frame {
+            max-width: 420px;
+            width: 100%;
+            height: 95vh; /* Adjusted for better screen fit */
+            max-height: 850px;
+        }
+        .draggable { cursor: grab; user-select: none; transition: all 0.2s; }
+        .draggable:active { cursor: grabbing; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 10; }
+        .dropzone {
+            border: 2px dashed #cbd5e1; /* slate-300 */
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        .dropzone.hover { background-color: #e0f2fe; border-color: #3b82f6; }
+        .modal {
+            display: none;
+            position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.6);
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        @keyframes modal-appear {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-content {
+            background-color: #ffffff; margin: auto; padding: 2rem;
+            width: 90%; max-width: 450px; border-radius: 1rem;
+            text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            animation: modal-appear 0.3s ease-out forwards;
+        }
+        .btn {
+            font-weight: 600; padding: 0.625rem 1.5rem; border-radius: 0.5rem; border: none; cursor: pointer;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease-in-out;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-secondary { background-color: #e5e7eb; color: #374151; }
+        .btn-secondary:hover { background-color: #d1d5db; }
+
+        .story-section { padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 1rem; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .qa-option {
+            width: 100%; text-align: right; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem;
+            background-color: white; transition: all 0.2s ease;
+        }
+        .qa-option:hover:not(:disabled) { background-color: #f3f4f6; transform: translateY(-2px); }
+        .qa-option.correct { background-color: #dcfce7; border-color: #22c55e; font-weight: 700; color: #166534; }
+        .qa-option.incorrect { background-color: #fee2e2; border-color: #ef4444; font-weight: 700; color: #991b1b; }
+        .qa-option:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes pulseOnce { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .animate-pulse-once { animation: pulseOnce 0.5s ease-out; }
+
+
+        /* New Map Styles */
+        .map-location {
+            position: relative; /* Changed from absolute */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.3s ease, filter 0.3s ease;
+            filter: drop-shadow(0 4px 3px rgba(0,0,0,0.2));
+        }
+
+        .map-location:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 8px 6px rgba(0,0,0,0.25));
+        }
+
+        .map-location .icon-container {
+            width: 72px; /* Increased size */
+            height: 72px; /* Increased size */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem; /* text-4xl */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 4px solid white;
+        }
+
+        .map-location .title-container {
+            margin-top: 0.5rem; /* Increased margin */
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
+            padding: 0.25rem 0.75rem; /* Increased padding */
+            border-radius: 0.75rem; /* More rounded */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 700; /* font-bold */
+            color: #334155; /* text-slate-700 */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.11.0"
+  }
+}
+</script>
+</head>
+<body class="selection:bg-amber-300 selection:text-amber-900 flex items-center justify-center min-h-screen">
+    <div id="app-container" class="app-frame bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
+        
+        <!-- HEADER -->
+        <header class="w-full py-3 px-4 shrink-0 border-b flex justify-between items-center bg-white/80 backdrop-blur-sm z-10">
+            <h1 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-500">قهرمان سلامت</h1>
+            <div id="header-stats" class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-700 text-lg" id="total-score">0</span>
+                    <span class="text-sm text-slate-500">امتیاز</span>
+                </div>
+                <button id="medals-btn" class="p-2 rounded-full hover:bg-amber-100 transition-colors">
+                    <svg class="w-7 h-7 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M15.89 4.11a1 1 0 00-1.412 0l-4.48 4.48-1.59-1.59a1 1 0 00-1.414 1.414l2.293 2.293a1 1 0 001.414 0l5.187-5.187a1 1 0 000-1.414zM10 2a8 8 0 100 16 8 8 0 000-16zM5.96 14.33a6.004 6.004 0 017.07-9.596 6 6 0 11-7.07 9.596z" clip-rule="evenodd" /></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN AREA -->
+        <main id="main-content" class="flex-1 overflow-y-auto relative">
+            <!-- Adventure Map Screen -->
+            <div id="adventure-map-container" class="w-full h-full relative overflow-hidden flex flex-col justify-center items-center">
+                <img src="https://storage.googleapis.com/genai-assets/adventure_map_bg.svg" class="absolute top-0 left-0 w-full h-full object-cover z-0" alt="Adventure Map Background"/>
+                <div id="welcome-banner" class="absolute top-2 right-2 left-2 text-center p-2 bg-white/70 backdrop-blur-sm rounded-xl z-10">
+                    <p id="welcome-message" class="text-slate-600 font-semibold text-sm">سلام قهرمان کوچک!</p>
+                </div>
+                <div id="story-locations" class="relative z-10 flex flex-wrap justify-center items-center gap-x-4 gap-y-8 p-6">
+                    <!-- Story locations are generated by JS -->
+                </div>
+            </div>
+
+            <!-- Story Screen (initially hidden) -->
+            <section id="story-screen" class="hidden absolute inset-0 bg-slate-50 w-full h-full flex flex-col p-4 z-30">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <h3 id="story-title" class="text-2xl font-extrabold text-slate-800"></h3>
+                    <button id="home-btn" class="p-2 rounded-full hover:bg-slate-200 transition-colors">
+                        <svg class="w-7 h-7 text-slate-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5" /></svg>
+                    </button>
+                </div>
+                <p id="story-character-intro" class="text-md text-slate-500 mb-6 italic text-center shrink-0"></p>
+                <div id="story-content-container" class="flex-1 space-y-8 overflow-y-auto pr-2">
+                    <!-- Story content is generated by JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer id="app-footer" class="shrink-0 border-t flex justify-around items-center py-2 bg-white/90 backdrop-blur-sm z-20">
+            <button id="chatbot-map-toggle" class="flex flex-col items-center gap-1 text-slate-600 hover:text-blue-500 transition-colors p-2 rounded-lg">
+                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6v-.75c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5" /></svg>
+                <span class="text-xs font-semibold">مربی هوشمند</span>
+            </button>
+            <button id="about-map-toggle" class="flex flex-col items-center gap-1 text-slate-600 hover:text-violet-500 transition-colors p-2 rounded-lg">
+                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 <span class="text-xs font-semibold">درباره ما</span>
+            </button>
+        </footer>
+        
+        <!-- MODALS -->
+        <div id="feedback-modal" class="modal">
+            <div class="modal-content">
+                <p id="modal-message" class="text-lg font-bold text-slate-800"></p>
+                <button id="close-modal" class="btn btn-primary mt-6 w-full">باشه!</button>
+            </div>
+        </div>
+
+        <div id="welcome-modal" class="modal" style="display: flex;">
+             <div class="modal-content">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">به قهرمان سلامت خوش آمدی!</h2>
+                <p class="text-slate-600 mb-6">برای شروع ماجراجویی، اسمت رو به ما بگو:</p>
+                <input type="text" id="name-input" placeholder="نام قهرمان" class="w-full p-3 border border-slate-300 rounded-lg text-center"/>
+                <button id="start-adventure-btn" class="btn btn-primary mt-4 w-full">شروع ماجراجویی</button>
+            </div>
+        </div>
+
+        <div id="chatbot-modal" class="modal">
+             <div class="modal-content !max-w-md !w-full !h-4/5 flex flex-col">
+                <h3 class="text-xl font-bold text-slate-800 mb-4 shrink-0">مربی سلامت هوشمند</h3>
+                <div id="chat-messages" class="flex-1 overflow-y-auto bg-slate-100 p-3 rounded-lg text-right space-y-3"></div>
+                <div class="mt-4 flex gap-2 shrink-0">
+                    <input type="text" id="chat-input" placeholder="سؤالت رو بپرس..." class="flex-1 p-2 border border-slate-300 rounded-lg"/>
+                    <button id="chat-send-btn" class="btn btn-primary">بپرس</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="medals-modal" class="modal">
+            <div class="modal-content">
+               <h2 class="text-xl font-bold text-slate-800 mb-6 text-center">گالری مدال‌ها</h2>
+               <div id="medal-gallery-content" class="grid grid-cols-3 sm:grid-cols-4 gap-4 justify-items-center"></div>
+                <button id="close-medals-modal" class="btn btn-primary mt-8 w-full">بازگشت</button>
+           </div>
+       </div>
+
+       <div id="about-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 text-center">درباره ما و منابع</h2>
+                <div class="text-right space-y-4 text-slate-600 text-sm bg-slate-50 p-4 rounded-lg">
+                    <p>این اپلیکیشن یک ابزار آموزشی بازی‌وار شده است که به کودکان دبستانی کمک می‌کند مهارت‌های ضروری سلامتی را بیاموزند. محتوای این وب اپلیکیشن برگرفته از رساله دکتری در زمینه رفتارهای تغذیه‌ای است که تحت حمایت دانشگاه تربیت مدرس انجام شده است.</p>
+                    <p><strong>ارتباط با ما:</strong> n.mehrjuyan@gmail.com, f.zarei@modares.ac.ir</p>
+                </div>
+                 <button id="close-about-modal" class="btn btn-primary mt-8 w-full">بازگشت</button>
+            </div>
+        </div>
+
+    </div>
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+        // --- DATA & STATE ---
+        const MEDAL_THRESHOLDS = [
+            { name: "نشان برنز", score: 50, color: "#CD7F32", unlocked: false },
+            { name: "نشان نقره", score: 150, color: "#A0AEC0", unlocked: false },
+            { name: "نشان طلا", score: 300, color: "#FBBF24", unlocked: false },
+            { name: "قهرمان تندرستی", score: 500, color: "#4ade80", unlocked: false }
+        ];
+        let totalScore = 0;
+        let currentStoryId = null;
+        let userName = "قهرمان";
+        let chat = null;
+        const storiesData = [
+            { id: 1, title: "شهر خوراکی‌ها", icon: "🍎", themeColor: "bg-gradient-to-br from-red-500 to-orange-400", characterIntro: "با آرین، سارا و پروانه سلامتی همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به یک ماجراجویی جادویی", text: "در یک روز آفتابی بهاری، آرین و سارا، دو دوست 8 ساله، در حیاط مدرسه مشغول بازی با یک توپ رنگارنگ بودند. ناگهان، پروانه‌ای درخشان با بال‌های رنگین‌کمانی از میان گل‌ها پرواز کرد و جلوی آن‌ها فرود آمد. پروانه با صدایی نرم و مهربان گفت: «سلام، قهرمان‌های کوچک! من پروانه سلامتی‌ام. می‌خواهید به شهر خوراکی‌ها سفر کنید؟ جایی که یاد می‌گیرید چطور بدنی قوی، ذهنی شاد و انرژی بی‌پایان داشته باشید!»\nآرین با چشمان براق گفت: «شهر خوراکی‌ها؟ یعنی چی؟» سارا خندید و گفت: «فکر کنم یه جای پر از شکلاته!» پروانه بال‌هایش را تکان داد و با خنده گفت: «نه دقیقاً! بیایید ببینید!» با یک چرخش جادویی، گردبادی از نور آن‌ها را به دنیایی عجیب برد؛ شهری که خیابان‌هایش از نان سبوس‌دار، درختانش از میوه‌های رنگارنگ و خانه‌هایش از پنیر و ماست ساخته شده بود!\nپروانه توضیح داد: «اینجا شهر خوراکی‌هاست، مثل یک نقشه جادویی برای سلامتی! هر بخش شهر یک گروه غذاییه که بدن شما رو قوی می‌کنه. آماده‌اید ماجراجویی رو شروع کنید؟»", tip: "شهر خوراکی‌ها استعاره‌ای از هرم غذایی است که کودکان را با گروه‌های غذایی و اهمیت تغذیه متعادل آشنا می‌کند." },
+                    { type: "qa", title: "آزمون خوراکی‌ها", questions: [{ q: "کدام گروه غذایی منبع اصلی انرژی بدن است؟", options: ["پروتئین‌ها", "غلات و نان", "لبنیات"], correct: "غلات و نان", points: 10 }] },
+                    { type: "dragDrop", title: "هرم غذایی", question: "گروه‌های غذایی زیر را به جایگاه درست در هرم غذایی بکشید.", items: [{ id: "fruit", text: "میوه‌ها و سبزیجات", category: "base" }, { id: "grain", text: "غلات", category: "base" }, { id: "protein", text: "پروتئین‌ها و لبنیات", category: "middle" }, { id: "fats", text: "چربی‌ها و شیرینی‌ها", category: "top" }], dropzones: [{ id: "zone-base", text: "قاعده هرم (بیشترین مصرف)", accepts: "base" }, { id: "zone-middle", text: "وسط هرم (مصرف متعادل)", accepts: "middle" }, { id: "zone-top", text: "نوک هرم (کمترین مصرف)", accepts: "top" }], points: 20 }
+            ] },
+            { id: 2, title: "قهرمانان ورزشکار", icon: "⚽️", themeColor: "bg-gradient-to-br from-sky-500 to-indigo-500", characterIntro: "با نیکا، کسری و عقاب سلامتی همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به جزیره سلامتی", text: "در یک روز بهاری، نیکا و کسری، دو دوست 9 ساله، در پارک نزدیک مدرسه مشغول بازی بودند. ناگهان، یک عقاب طلایی از آسمان پایین آمد و گفت: «من عقاب سلامتی‌ام! می‌خواهید به جزیره سلامتی سفر کنید و یاد بگیرید چطور قوی، شاد و باهوش بمانید؟» نیکا و کسری با هیجان فریاد زدند: «آره، خیلی دوست داریم!» عقاب بال‌هایش را تکان داد و آنها را به جزیره‌ای جادویی برد، جایی که همه‌چیز پر از انرژی و حرکت بود!\nعقاب گفت: «اینجا جزیره سلامتیه! هر گوشه‌اش یه راز برای قوی و شاد موندن داره. آماده‌اید کشفش کنید؟»", tip: "معرفی جزیره سلامتی به‌عنوان استعاره‌ای برای فواید ورزش، که کودکان را با اهمیت فعالیت بدنی آشنا می‌کند." },
+                    { type: "qa", title: "آزمون ورزش", questions: [{ q: "ورزش کردن کدام قسمت بدن را مثل یک پمپ قوی می‌کند؟", options: ["مغز", "قلب", "پاها"], correct: "قلب", points: 10 }] },
+                    { type: "dragDrop", title: "وسایل ورزشی", question: "هر وسیله ایمنی را به ورزش مربوط به آن وصل کن.", items: [{ id: "helmet", text: "کلاه ایمنی", category: "cycling" }, { id: "pads", text: "زانوبند", category: "skating" }, { id: "goggles", text: "عینک شنا", category: "swimming" }], dropzones: [{ id: "dz-cycling", text: "دوچرخه‌سواری", accepts: "cycling" }, { id: "dz-skating", text: "اسکیت‌سواری", accepts: "skating" }, { id: "dz-swimming", text: "شنا", accepts: "swimming" }], points: 15 }
+            ] },
+            { id: 3, title: "شکارچیان میکروب", icon: "🧼", themeColor: "bg-gradient-to-br from-teal-400 to-cyan-500", characterIntro: "با آوا، آرتین و حباب شجاع همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به شهر تمیز", text: "روزی آوا و آرتین، دو دوست 8 ساله، در حیاط مدرسه مشغول بازی با توپ بودند. ناگهان، یک حباب صابونی بزرگ و درخشان از آسمان پایین آمد و گفت: «من حباب شجاعم، نگهبان شهر تمیز! می‌خواهید به شهری سفر کنید که یاد بگیرید چطور میکروب‌های نامرئی رو شکار کنید و سالم بمانید؟» آوا با هیجان گفت: «وای، میکروب شکار کردن؟ خیلی باحاله!» آرتین هم پرید و گفت: «بله، بریم!» حباب شجاع آن‌ها را با یک وزش جادویی به شهر تمیز برد، جایی که همه‌چیز پر از کف‌های رنگارنگ و بوی صابون بود!\nحباب گفت: «اینجا شهر تمیزه! میکروب‌های نامرئی همه‌جا قایم شدن، ولی شما می‌تونید با شستن دست‌هاتون اونا رو شکست بدید. آماده‌اید؟»", tip: "معرفی اهمیت شستشوی دست برای پیشگیری از بیماری‌ها و جلب توجه کودکان با یک دنیای خیالی." },
+                    { type: "qa", title: "آزمون میکروب‌شناسی", questions: [{ q: "میکروب‌ها بیشتر روی کدام یک از این‌ها قایم می‌شوند؟", options: ["کتاب تمیز", "دستگیره در", "سیب شسته شده"], correct: "دستگیره در", points: 10 }] },
+                    { type: "dragDrop", title: "مراحل شستن دست", question: "مراحل شستن دست را به ترتیب درست در کادر زیر قرار بده.", items: [{ id: "soap", text: "صابون زدن", category: "2" }, { id: "dry", text: "خشک کردن", category: "4" }, { id: "water", text: "خیس کردن با آب", category: "1" }, { id: "rub", text: "مالش دست‌ها", category: "3" }], dropzones: [{ id: "step1", text: "مرحله اول", accepts: "1" }, { id: "step2", text: "مرحله دوم", accepts: "2" }, { id: "step3", text: "مرحله سوم", accepts: "3" }, { id: "step4", text: "مرحله چهارم", accepts: "4" }], points: 20 }
+            ] },
+            { id: 4, title: "نگهبانان سلامت", icon: "🛡️", themeColor: "bg-gradient-to-br from-violet-500 to-purple-500", characterIntro: "با سارا، سام و پرنده سلامت همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به سرزمین سلامت", text: "روزی سارا و سام، دو دوست 9 ساله، در حیاط مدرسه مشغول بازی با توپ بودند. ناگهان، یک پرنده کوچک با بال‌های رنگارنگ و یک شنل آبی براق از آسمان پایین آمد و گفت: «من پرنده سلامت‌ام، نگهبان سرزمین سلامت! می‌خواهید به جایی سفر کنید که یاد بگیرید چطور از بیماری‌های واگیر مثل سرماخوردگی و آبله‌مرغان دور بمانید؟»", tip: "معرفی بیماری‌های واگیر و راه‌های انتقال میکروب." },
+                    { type: "qa", title: "آزمون پیشگیری", questions: [{ q: "بهترین کار موقع عطسه کردن وقتی دستمال نداریم چیست؟", options: ["عطسه در هوا", "عطسه در دست", "عطسه در آرنج"], correct: "عطسه در آرنج", points: 10 }] },
+                    { type: "dragDrop", title: "جفت‌های بهداشتی", question: "هر کار را به دلیل بهداشتی آن وصل کن.", items: [{ id: "wash", text: "شستن دست", category: "germs" }, { id: "distance", text: "فاصله گرفتن", category: "sick" }, { id: "tissues", text: "استفاده از دستمال", category: "sneeze" }], dropzones: [{ id: "dz-germs", text: "برای کشتن میکروب‌ها", accepts: "wash" }, { id: "dz-sick", text: "از فرد بیمار", accepts: "distance" }, { id: "dz-sneeze", text: "هنگام عطسه", accepts: "tissues" }], points: 15 }
+            ] },
+            { id: 5, title: "نگهبانان سبز", icon: "🌳", themeColor: "bg-gradient-to-br from-green-500 to-emerald-500", characterIntro: "با لیلی، آرین و پروانه سبز همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به سرزمین سبز", text: "روزی لیلی و آرین، دو دوست 8 ساله، در پارک نزدیک مدرسه مشغول بازی با طناب بودند. ناگهان، یک پروانه بزرگ با بال‌های رنگارنگ و یک تاج سبز براق از روی گل‌ها پرواز کرد و گفت: «من پروانه سبزم، نگهبان سرزمین سبز! می‌خواهید به جایی سفر کنید که یاد بگیرید چطور از محیط زیست، مثل درخت‌ها، حیوانات، رودخانه‌ها و هوا مراقبت کنید؟»", tip: "محیط زیست شامل همه چیز اطراف ماست و مراقبت از آن ضروری است." },
+                    { type: "dragDrop", title: "تفکیک زباله", question: "هر زباله را در سطل درست (تر یا خشک) بینداز.", items: [{ id: "banana", text: "پوست موز", category: "wet" }, { id: "bottle", text: "بطری پلاستیکی", category: "dry" }, { id: "paper", text: "کاغذ باطله", category: "dry" }, { id: "apple-core", text: "باقیمانده سیب", category: "wet" }], dropzones: [{ id: "dz-dry", text: "سطل زباله خشک", accepts: "dry" }, { id: "dz-wet", text: "سطل زباله تر", accepts: "wet" }], points: 20 },
+                    { type: "qa", title: "آزمون محیط زیست", questions: [{ q: "برای صرفه‌جویی در مصرف کاغذ چه کار خوبی می‌توانیم انجام دهیم؟", options: ["روی یک طرف آن نقاشی کنیم", "آن را مچاله کنیم و دور بیندازیم", "روی هر دو طرف آن بنویسیم یا نقاشی کنیم"], correct: "روی هر دو طرف آن بنویسیم یا نقاشی کنیم", points: 10 }] }
+            ] },
+            { id: 6, title: "نگهبانان ایمنی", icon: "⛑️", themeColor: "bg-gradient-to-br from-rose-500 to-pink-500", characterIntro: "با سوفی، سامی و روباه ایمنی همراه شوید...", content: [
+                    { type: "narrative", title: "دعوت به شهر ایمنی", text: "روزی سوفی و سامی، دو دوست 9 ساله، در حیاط مدرسه مشغول بازی با توپ بودند. ناگهان، یک روباه کوچولو با یه کلاه ایمنی زرد براق از پشت درخت پرید و گفت: «من روباه ایمنی‌ام، نگهبان شهر ایمنی! می‌خواید به جایی سفر کنید که یاد بگیرید چطور از حوادث مثل تصادف، سقوط یا سوختگی در امان بمونید؟»", tip: "حوادث غیرمنتظره قابل پیشگیری هستند." },
+                    { type: "qa", title: "آزمون ایمنی", questions: [{ q: "هنگام عبور از خیابان اولین کاری که باید انجام دهیم چیست؟", options: ["دویدن سریع", "نگاه کردن به چپ و راست", "بازی کردن"], correct: "نگاه کردن به چپ و راست", points: 10 }] },
+                    { type: "dragDrop", title: "جورچین شماره‌های اضطراری", question: "هر شماره را به سازمان مربوطه وصل کن.", items: [{ id: "115", text: "115", category: "emergency" }, { id: "125", text: "125", category: "fire" }, { id: "110", text: "110", category: "police" }], dropzones: [{ id: "dz-emergency", text: "اورژانس", accepts: "emergency" }, { id: "dz-fire", text: "آتش‌نشانی", accepts: "fire" }, { id: "dz-police", text: "پلیس", accepts: "police" }], points: 15 }
+            ] }
+        ];
+        // --- DOM ELEMENTS ---
+        const mainContent = document.getElementById('main-content');
+        const storyLocationsContainer = document.getElementById('story-locations');
+        const storyScreen = document.getElementById('story-screen');
+        const adventureMapContainer = document.getElementById('adventure-map-container');
+        const storyTitleEl = document.getElementById('story-title');
+        const storyCharacterIntroEl = document.getElementById('story-character-intro');
+        const storyContentContainer = document.getElementById('story-content-container');
+        const totalScoreEl = document.getElementById('total-score');
+        const welcomeMessageEl = document.getElementById('welcome-message');
+        const homeBtn = document.getElementById('home-btn');
+        // Modals
+        const feedbackModal = document.getElementById('feedback-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeModalBtn = document.getElementById('close-modal');
+        const welcomeModal = document.getElementById('welcome-modal');
+        const nameInput = document.getElementById('name-input');
+        const startAdventureBtn = document.getElementById('start-adventure-btn');
+        const chatbotModal = document.getElementById('chatbot-modal');
+        const medalsModal = document.getElementById('medals-modal');
+        const aboutModal = document.getElementById('about-modal');
+        // Modal Buttons
+        const medalsBtn = document.getElementById('medals-btn');
+        const closeMedalsModalBtn = document.getElementById('close-medals-modal');
+        const aboutMapToggleBtn = document.getElementById('about-map-toggle');
+        const closeAboutModalBtn = document.getElementById('close-about-modal');
+        const chatbotMapToggleBtn = document.getElementById('chatbot-map-toggle');
+        // Chatbot
+        const chatMessagesContainer = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        // Medal Gallery
+        const medalGalleryContent = document.getElementById('medal-gallery-content');
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGameState();
+            renderAdventureMap();
+            renderMedalGallery();
+            updateScore(0);
+            addEventListeners();
+        });
+        // --- STATE MANAGEMENT ---
+        function saveGameState() {
+            const gameState = {
+                totalScore,
+                userName,
+                unlockedMedals: MEDAL_THRESHOLDS.filter(m => m.unlocked).map(m => m.name)
+            };
+            localStorage.setItem('healthHeroesGameState', JSON.stringify(gameState));
+        }
+        function loadGameState() {
+            const savedState = localStorage.getItem('healthHeroesGameState');
+            if (savedState) {
+                try {
+                    const gameState = JSON.parse(savedState);
+                    totalScore = gameState.totalScore || 0;
+                    userName = gameState.userName || "قهرمان";
+                    if (gameState.unlockedMedals) {
+                        MEDAL_THRESHOLDS.forEach(medal => {
+                            if (gameState.unlockedMedals.includes(medal.name)) {
+                                medal.unlocked = true;
+                            }
+                        });
+                    }
+                    welcomeModal.style.display = 'none';
+                    updateWelcomeMessage();
+                }
+                catch (error) {
+                    console.error("Failed to parse saved game state, resetting.", error);
+                    localStorage.removeItem('healthHeroesGameState');
+                    // Show welcome modal to start over
+                    welcomeModal.style.display = 'flex';
+                }
+            }
+            else {
+                welcomeModal.style.display = 'flex';
+            }
+        }
+        // --- UI RENDERING ---
+        function updateWelcomeMessage() {
+            welcomeMessageEl.textContent = `سلام ${userName}! به سرزمین سلامت خوش آمدی.`;
+        }
+        function renderAdventureMap() {
+            storyLocationsContainer.innerHTML = '';
+            storiesData.forEach(story => {
+                const locationEl = document.createElement('div');
+                locationEl.className = 'map-location';
+                locationEl.innerHTML = `
+            <div class="icon-container ${story.themeColor}">${story.icon}</div>
+            <div class="title-container">${story.title}</div>
+        `;
+                locationEl.addEventListener('click', () => showStory(story.id));
+                storyLocationsContainer.appendChild(locationEl);
+            });
+        }
+        function renderMedalGallery() {
+            medalGalleryContent.innerHTML = '';
+            MEDAL_THRESHOLDS.forEach(medal => {
+                const medalEl = document.createElement('div');
+                medalEl.className = 'flex flex-col items-center text-center';
+                const isUnlocked = medal.unlocked;
+                medalEl.innerHTML = `
+            <div class="w-16 h-16 rounded-full flex items-center justify-center text-4xl ${isUnlocked ? '' : 'grayscale opacity-50'}" style="background-color: ${medal.color};">
+                ${isUnlocked ? '🏆' : '❓'}
+            </div>
+            <span class="mt-2 text-xs font-semibold ${isUnlocked ? 'text-slate-700' : 'text-slate-400'}">${medal.name}</span>
+            <span class="text-xs text-slate-400">${medal.score} امتیاز</span>`;
+                medalGalleryContent.appendChild(medalEl);
+            });
+        }
+        function showStory(storyId) {
+            currentStoryId = storyId;
+            const story = storiesData.find(s => s.id === storyId);
+            if (!story)
+                return;
+            storyTitleEl.textContent = story.title;
+            storyCharacterIntroEl.textContent = story.characterIntro;
+            renderStoryContent(story.content);
+            adventureMapContainer.classList.add('hidden');
+            storyScreen.classList.remove('hidden');
+            storyScreen.classList.add('flex');
+            mainContent.scrollTop = 0;
+        }
+        function renderStoryContent(content) {
+            storyContentContainer.innerHTML = '';
+            content.forEach((item, index) => {
+                const section = document.createElement('div');
+                section.className = 'story-section animate-fade-in';
+                section.style.animationDelay = `${index * 100}ms`;
+                switch (item.type) {
+                    case 'narrative':
+                        section.innerHTML = `<h3 class="text-xl font-bold text-slate-800 mb-4">${item.title}</h3><p class="text-slate-600 leading-relaxed whitespace-pre-line">${item.text}</p>`;
+                        break;
+                    case 'qa':
+                        section.innerHTML = `<h3 class="text-xl font-bold text-slate-800 mb-4">${item.title}</h3>${item.questions.map((q, qIndex) => `<div class="qa-container mt-4" data-points="${q.points}" data-question-index="${qIndex}"><p class="font-semibold mb-3">${q.q}</p><div class="space-y-2">${q.options.map(opt => `<button class="qa-option">${opt}</button>`).join('')}</div></div>`).join('')}`;
+                        break;
+                    case 'dragDrop':
+                        section.innerHTML = `<h3 class="text-xl font-bold text-slate-800 mb-4">${item.title}</h3><p class="text-slate-600 mb-4">${item.question}</p><div class="flex flex-col md:flex-row gap-4"><div class="w-full md:w-1/3 p-4 bg-slate-100 rounded-lg space-y-3" id="drag-items-${index}">${item.items.map(i => `<div class="draggable bg-white p-3 rounded-lg shadow-sm" draggable="true" data-item-id="${i.id}" data-category="${i.category}">${i.text}</div>`).join('')}</div><div class="w-full md:w-2/3 space-y-3" id="drop-zones-${index}">${item.dropzones.map(dz => `<div class="dropzone p-6 text-center" data-accepts="${dz.accepts}"><span class="font-semibold text-slate-500">${dz.text}</span></div>`).join('')}</div></div><button class="btn btn-primary mt-6 check-drag-drop-btn" data-section-index="${index}" data-points="${item.points}">بررسی جواب</button>`;
+                        break;
+                }
+                storyContentContainer.appendChild(section);
+            });
+            addActivityListeners();
+        }
+        function showHomeScreen() {
+            storyScreen.classList.add('hidden');
+            storyScreen.classList.remove('flex');
+            adventureMapContainer.classList.remove('hidden');
+        }
+        // --- EVENT LISTENERS & HANDLERS ---
+        function addEventListeners() {
+            homeBtn.addEventListener('click', showHomeScreen);
+            // Modal Toggles
+            medalsBtn.addEventListener('click', () => medalsModal.style.display = 'flex');
+            closeMedalsModalBtn.addEventListener('click', () => medalsModal.style.display = 'none');
+            aboutMapToggleBtn.addEventListener('click', () => aboutModal.style.display = 'flex');
+            closeAboutModalBtn.addEventListener('click', () => aboutModal.style.display = 'none');
+            chatbotMapToggleBtn.addEventListener('click', openChatbot);
+            // Welcome Modal
+            startAdventureBtn.addEventListener('click', () => {
+                const name = nameInput.value.trim();
+                if (name) {
+                    userName = name;
+                    updateWelcomeMessage();
+                    saveGameState();
+                    welcomeModal.style.display = 'none';
+                }
+                else {
+                    nameInput.placeholder = "لطفا اسمت رو بنویس!";
+                    nameInput.classList.add('border-red-500');
+                }
+            });
+            // Feedback Modal
+            closeModalBtn.addEventListener('click', () => feedbackModal.style.display = 'none');
+            // Chatbot
+            chatSendBtn.addEventListener('click', handleChatSend);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter')
+                    handleChatSend();
+            });
+            chatbotModal.addEventListener('click', (e) => {
+                if (e.target === chatbotModal)
+                    chatbotModal.style.display = 'none';
+            });
+        }
+        function addActivityListeners() {
+            document.querySelectorAll('.qa-option').forEach(button => button.addEventListener('click', handleQA));
+            let draggedItem = null;
+            document.querySelectorAll('.draggable').forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    draggedItem = e.target;
+                    setTimeout(() => e.target.style.display = 'none', 0);
+                });
+                item.addEventListener('dragend', e => {
+                    setTimeout(() => { e.target.style.display = 'block'; draggedItem = null; }, 0);
+                });
+            });
+            document.querySelectorAll('.dropzone').forEach(zone => {
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('hover'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('hover'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault();
+                    zone.classList.remove('hover');
+                    if (draggedItem && !zone.querySelector('.draggable')) {
+                        zone.appendChild(draggedItem);
+                    }
+                });
+            });
+            document.querySelectorAll('.check-drag-drop-btn').forEach(btn => btn.addEventListener('click', handleCheckDragDrop));
+        }
+        function handleQA(event) {
+            const button = event.target;
+            const container = button.closest('.qa-container');
+            const qIndex = parseInt(container.dataset.questionIndex, 10);
+            const story = storiesData.find(s => s.id === currentStoryId);
+            const questionData = story?.content.find(c => c.type === 'qa');
+            if (!questionData)
+                return;
+            const question = questionData.questions[qIndex];
+            const isCorrect = button.textContent === question.correct;
+            const points = parseInt(container.dataset.points, 10);
+            if (isCorrect) {
+                button.classList.add('correct');
+                updateScore(points);
+                showFeedbackModal(`آفرین! جوابت درست بود و ${points} امتیاز گرفتی.`);
+            }
+            else {
+                button.classList.add('incorrect');
+                showFeedbackModal('اشتباه بود، ولی نگران نباش! به ماجراجویی ادامه بده.');
+            }
+            container.querySelectorAll('.qa-option').forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === question.correct) {
+                    btn.classList.add('correct');
+                }
+            });
+        }
+        function handleCheckDragDrop(event) {
+            const button = event.target;
+            const sectionIndex = button.dataset.sectionIndex;
+            const points = parseInt(button.dataset.points, 10);
+            const dropZones = document.querySelectorAll(`#drop-zones-${sectionIndex} .dropzone`);
+            let correctDrops = 0;
+            let totalItemsInZones = 0;
+            dropZones.forEach(zone => {
+                const droppedItem = zone.querySelector('.draggable');
+                if (droppedItem) {
+                    totalItemsInZones++;
+                    if (droppedItem.dataset.category === zone.dataset.accepts) {
+                        correctDrops++;
+                        zone.style.borderColor = '#22c55e';
+                    }
+                    else {
+                        zone.style.borderColor = '#ef4444';
+                    }
+                }
+            });
+            const allItems = document.querySelectorAll(`#drag-items-${sectionIndex} .draggable`);
+            if (totalItemsInZones === allItems.length && correctDrops === totalItemsInZones) {
+                updateScore(points);
+                showFeedbackModal(`عالیه! همه رو درست گذاشتی و ${points} امتیاز گرفتی.`);
+                button.disabled = true;
+            }
+            else {
+                showFeedbackModal('بعضی از موارد اشتباهه. دوباره نگاه کن!');
+            }
+        }
+        // --- SCORE & MEDALS ---
+        function updateScore(points) {
+            if (points > 0)
+                totalScore += points;
+            totalScoreEl.textContent = totalScore.toString();
+            totalScoreEl.classList.add('animate-pulse-once');
+            setTimeout(() => totalScoreEl.classList.remove('animate-pulse-once'), 500);
+            checkMedals();
+            saveGameState();
+        }
+        function checkMedals() {
+            let newMedalUnlocked = false;
+            MEDAL_THRESHOLDS.forEach(medal => {
+                if (!medal.unlocked && totalScore >= medal.score) {
+                    medal.unlocked = true;
+                    newMedalUnlocked = true;
+                    showFeedbackModal(`تبریک ${userName}! شما "${medal.name}" را به دست آوردید! 🏅`);
+                }
+            });
+            if (newMedalUnlocked) {
+                renderMedalGallery();
+            }
+        }
+        // --- MODALS ---
+        function showFeedbackModal(message) {
+            modalMessage.textContent = message;
+            feedbackModal.style.display = 'flex';
+        }
+        // --- CHATBOT ---
+        const SYSTEM_INSTRUCTION = `You are a friendly and encouraging health coach for children aged 7-10. Your name is 'مربی هوشمند' (Smart Coach). You MUST answer in Persian. Your goal is to answer questions about health, nutrition, exercise, and hygiene in a simple, positive, and easy-to-understand way. Keep your answers short (2-3 sentences), fun, and engaging. Always be supportive. You are NOT a medical professional. If asked a specific medical question or for a diagnosis, you MUST gently refuse and advise the child to talk to their parents, a teacher, or a doctor. For example: "این یه سوال خیلی مهمه! بهترین کار اینه که با پدر و مادر یا دکتر صحبت کنی تا بهترین جواب رو بگیری."`;
+        function initializeChat() {
+            if (chat)
+                return;
+            try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                chat = ai.chats.create({
+                    model: 'gemini-2.5-flash',
+                    config: {
+                        systemInstruction: SYSTEM_INSTRUCTION,
+                    },
+                });
+            }
+            catch (error) {
+                console.error("Chat initialization failed:", error);
+                addMessageToChat('bot', 'متاسفانه الان نمی‌تونم وصل بشم. لطفا بعدا دوباره امتحان کن.');
+            }
+        }
+        function openChatbot() {
+            chatbotModal.style.display = 'flex';
+            initializeChat();
+            if (chatMessagesContainer.children.length === 0) {
+                addMessageToChat('bot', `سلام ${userName}! من مربی سلامت هوشمند تو هستم. هر سؤالی درباره سلامتی داری بپرس!`);
+            }
+        }
+        async function handleChatSend() {
+            const question = chatInput.value.trim();
+            if (!question || chatSendBtn.disabled)
+                return;
+            if (!chat) {
+                addMessageToChat('bot', 'اوه! مشکلی در راه‌اندازی مربی پیش اومده. لطفا پنجره را ببند و دوباره باز کن.');
+                return;
+            }
+            addMessageToChat('user', question);
+            chatInput.value = '';
+            const thinkingMsg = addMessageToChat('bot', '...');
+            chatSendBtn.disabled = true;
+            chatInput.disabled = true;
+            try {
+                const response = await chat.sendMessage({ message: question });
+                thinkingMsg.textContent = response.text;
+            }
+            catch (error) {
+                console.error("Chat API error:", error);
+                thinkingMsg.textContent = 'اوه! یه مشکلی پیش اومد. می‌تونی دوباره سوالت رو بپرسی؟';
+            }
+            finally {
+                chatSendBtn.disabled = false;
+                chatInput.disabled = false;
+                chatInput.focus();
+            }
+        }
+        function addMessageToChat(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `p-3 rounded-lg max-w-[85%] break-words ${sender === 'user' ? 'bg-blue-500 text-white self-end' : 'bg-slate-200 text-slate-800 self-start'}`;
+            messageDiv.textContent = text;
+            chatMessagesContainer.appendChild(messageDiv);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            return messageDiv;
+        }
+    </script>
+</body>
+</html>
